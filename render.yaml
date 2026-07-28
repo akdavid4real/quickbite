@@ -15,10 +15,7 @@ services:
       - key: DEMO_DATA_ENABLED
         value: "true"
       - key: CORS_ALLOWED_ORIGINS
-        fromService:
-          type: web
-          name: quickbite-web
-          property: host
+        value: https://quickbite-web-nqrq.onrender.com
 
   - type: web
     name: quickbite-web
@@ -29,10 +26,7 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: quickbite-api
-          property: host
+        value: https://quickbite-api-3czc.onrender.com
     routes:
       - type: rewrite
         source: /*
