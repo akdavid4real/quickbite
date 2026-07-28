@@ -24,7 +24,7 @@ services:
     name: quickbite-web
     runtime: static
     rootDir: frontend
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    buildCommand: pnpm build
     staticPublishPath: ./dist
     autoDeployTrigger: commit
     envVars:
