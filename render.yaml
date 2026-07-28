@@ -4,13 +4,9 @@ services:
     runtime: docker
     rootDir: QuickBite
     dockerfilePath: ./Dockerfile
-    plan: starter
+    plan: free
     healthCheckPath: /api/restaurants
     autoDeployTrigger: commit
-    disk:
-      name: quickbite-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
         generateValue: true

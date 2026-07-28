@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-DB_PATH="${DB_PATH:-/var/data/quickbite.db}"
+DB_PATH="${DB_PATH:-/tmp/quickbite.db}"
 mkdir -p "$(dirname "$DB_PATH")"
 
 if [ ! -f "$DB_PATH" ]; then

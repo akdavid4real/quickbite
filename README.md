@@ -48,11 +48,11 @@ Demo data can be disabled with `DEMO_DATA_ENABLED=false`.
 1. Create a new Render Blueprint from this repository.
 2. Render reads `render.yaml` and creates `quickbite-api` and `quickbite-web`.
 3. Provide `PAYSTACK_SECRET_KEY` when prompted.
-4. Use a paid backend instance if SQLite changes must survive restarts and deploys,
-   because Render persistent disks are not available on free web services.
+4. The backend deploys on Render's free web-service tier.
 
-On the backend's first boot, the committed `QuickBite/quickbite.db` is copied to
-the persistent disk. Later deploys preserve the disk database.
+The committed `QuickBite/quickbite.db` seeds `/tmp/quickbite.db` when the backend
+starts. Free Render services use an ephemeral filesystem, so online database
+changes can be lost when the service restarts, spins down, or redeploys.
 
 ## Verification
 
