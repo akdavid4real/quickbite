@@ -89,6 +89,21 @@ public class DemoDataInitializer implements ApplicationRunner {
         upsertMenu(17L, restaurant, "Goat Meat Pepper Soup",
                 "Aromatic pepper soup with tender goat meat and warming spices.",
                 "Soups", "4800.00", "/assets/menu/pepper-soup.png");
+        upsertMenu(18L, restaurant, "Coconut Rice & Prawns",
+                "Fragrant coconut rice tossed with vegetables and juicy prawns.",
+                "Rice", "4600.00", "/assets/menu/coconut-rice.webp");
+        upsertMenu(19L, restaurant, "Ofada Rice & Ayamase",
+                "Local Ofada rice served with bold green pepper ayamase and egg.",
+                "Rice", "5000.00", "/assets/menu/ofada-rice-ayamase.webp");
+        upsertMenu(101L, restaurant, "Asaro Yam Porridge",
+                "Soft yam simmered in a rich palm-oil pepper sauce.",
+                "Mains", "3400.00", "/assets/menu/asaro-yam-porridge.webp");
+        upsertMenu(102L, restaurant, "Nigerian Meat Pie",
+                "Golden pastry filled with seasoned minced beef and vegetables.",
+                "Pastries", "1600.00", "/assets/menu/meat-pie.webp");
+        upsertMenu(103L, restaurant, "Abacha African Salad",
+                "Eastern Nigerian cassava salad with fish, vegetables and ugba.",
+                "Mains", "4200.00", "/assets/menu/abacha.webp");
 
         Restaurant mamaTs = ensureRestaurant(
                 2L, owner, "Mama T's Kitchen",
@@ -115,6 +130,21 @@ public class DemoDataInitializer implements ApplicationRunner {
         upsertMenu(26L, mamaTs, "Akara Breakfast",
                 "Crisp bean fritters served hot for a simple Lagos breakfast.",
                 "Breakfast", "1800.00", "/assets/menu/akara.webp");
+        upsertMenu(27L, mamaTs, "Ogbono Soup & Eba",
+                "Draw soup made with ground ogbono, greens and assorted meat.",
+                "Swallow", "5200.00", "/assets/menu/ogbono-soup.webp");
+        upsertMenu(28L, mamaTs, "Okra Soup & Pounded Yam",
+                "Fresh chopped okra cooked with fish and assorted meat.",
+                "Swallow", "5300.00", "/assets/menu/okra-soup.webp");
+        upsertMenu(29L, mamaTs, "Afang Soup & Fufu",
+                "A hearty Cross River vegetable soup with assorted meat.",
+                "Swallow", "5600.00", "/assets/menu/afang-soup.webp");
+        upsertMenu(30L, mamaTs, "Banga Soup & Starch",
+                "Palm fruit soup with traditional spices, fish and meat.",
+                "Swallow", "5700.00", "/assets/menu/banga-soup.webp");
+        upsertMenu(201L, mamaTs, "Pap & Akara",
+                "Creamy pap served with freshly fried bean cakes.",
+                "Breakfast", "2300.00", "/assets/menu/pap-and-akara.webp");
 
         Restaurant suyaRepublic = ensureRestaurant(
                 3L, owner, "Suya Republic",
@@ -141,6 +171,21 @@ public class DemoDataInitializer implements ApplicationRunner {
         upsertMenu(36L, suyaRepublic, "Party Jollof & Suya",
                 "Smoky party jollof paired with freshly grilled beef suya.",
                 "Rice", "5200.00", "/assets/menu/jollof-rice.webp");
+        upsertMenu(37L, suyaRepublic, "Nkwobi",
+                "Tender cow foot tossed in a spicy palm-oil sauce.",
+                "Native Pots", "5200.00", "/assets/menu/nkwobi.webp");
+        upsertMenu(38L, suyaRepublic, "Isi Ewu",
+                "Traditional spiced goat head finished with onions and herbs.",
+                "Native Pots", "6500.00", "/assets/menu/isi-ewu.webp");
+        upsertMenu(39L, suyaRepublic, "Puff Puff",
+                "Soft, golden Nigerian dough bites served warm.",
+                "Small Chops", "1500.00", "/assets/menu/puff-puff.webp");
+        upsertMenu(40L, suyaRepublic, "Bole & Grilled Fish",
+                "Roasted plantain with grilled fish and fiery pepper sauce.",
+                "Grills", "6800.00", "/assets/menu/bole-grilled-fish.webp");
+        upsertMenu(41L, suyaRepublic, "Asun",
+                "Smoky grilled goat meat tossed with chopped peppers and onions.",
+                "Grills", "5000.00", "/assets/menu/asun.webp");
     }
 
     private User ensureUser(String name, String email, String phoneNumber, UserRole role) {

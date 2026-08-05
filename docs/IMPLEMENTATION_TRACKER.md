@@ -87,6 +87,8 @@ August 2026 repository audit.
 - 2026-08-05: Expanded the idempotent demo catalog to three verified restaurants
   and 19 menu items. Added five optimized Nigerian-food images and refreshed the
   tracked SQLite seed so fresh deployments receive the complete catalog.
+- 2026-08-05: Expanded the food-media library to 30 images total and connected
+  all 15 additions to seeded dishes, bringing the demo catalog to 34 menu items.
 
 ## Completion evidence
 
