@@ -6,6 +6,8 @@ import com.debbiecyber.QuickBite.dto.resquest.LoginRequest;
 import com.debbiecyber.QuickBite.dto.resquest.RegisterRequest;
 import com.debbiecyber.QuickBite.entity.User;
 import com.debbiecyber.QuickBite.enums.UserRole;
+import com.debbiecyber.QuickBite.enums.AccountStatus;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
 import com.debbiecyber.QuickBite.exceptions.BadRequestException;
 import com.debbiecyber.QuickBite.repository.UserRepository;
 import com.debbiecyber.QuickBite.security.JwtUtil;
@@ -35,6 +37,8 @@ public class AuthService {
             throw new BadRequestException("You cannot register an admin");
         }
         String hashedPassword = passwordEncoder.encode(registerRequest.getPassword());
+        boolean provider = registerRequest.getRole() == UserRole.RESTAURANT_OWNER
+                || registerRequest.getRole() == UserRole.RIDER;
 
         User user = User.builder()
                 .name(registerRequest.getName())
@@ -43,6 +47,8 @@ public class AuthService {
                 .phoneNumber(registerRequest.getPhoneNumber())
                 .address(registerRequest.getAddress())
                 .role(registerRequest.getRole())
+                .accountStatus(provider ? AccountStatus.PENDING_APPROVAL : AccountStatus.ACTIVE)
+                .verificationStatus(provider ? VerificationStatus.PENDING : VerificationStatus.NOT_REQUIRED)
                 .build();
         User savedUser = userRepository.save(user);
 
@@ -60,6 +66,8 @@ public class AuthService {
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
+                .accountStatus(savedUser.getAccountStatus())
+                .verificationStatus(savedUser.getVerificationStatus())
                 .build();
     }
 
@@ -78,6 +86,8 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .accountStatus(user.getAccountStatus())
+                .verificationStatus(user.getVerificationStatus())
                 .build();
     }
 }

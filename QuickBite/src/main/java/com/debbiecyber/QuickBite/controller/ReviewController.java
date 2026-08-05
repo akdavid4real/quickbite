@@ -3,6 +3,7 @@ package com.debbiecyber.QuickBite.controller;
 
 import com.debbiecyber.QuickBite.dto.response.APIResponse;
 import com.debbiecyber.QuickBite.dto.response.ReviewResponse;
+import com.debbiecyber.QuickBite.dto.response.PageResponse;
 import com.debbiecyber.QuickBite.dto.resquest.ReviewRequest;
 import com.debbiecyber.QuickBite.service.ReviewService;
 import jakarta.validation.Valid;
@@ -15,6 +16,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequiredArgsConstructor
@@ -36,8 +40,8 @@ public class ReviewController {
 
 
     @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<APIResponse<List<ReviewResponse>>> getAllRestaurantReviews(@PathVariable Long restaurantId) {
-        List<ReviewResponse> reviewResponseList = reviewService.getRestaurantReviews(restaurantId);
+    public ResponseEntity<APIResponse<PageResponse<ReviewResponse>>> getAllRestaurantReviews(@PathVariable Long restaurantId, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<ReviewResponse> reviewResponseList = reviewService.getRestaurantReviews(restaurantId, pageable);
 
         return ResponseEntity.ok(APIResponse.success("Reviews fetched successfully", reviewResponseList));
     }
@@ -45,8 +49,8 @@ public class ReviewController {
 
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<APIResponse<List<ReviewResponse>>> getAllMyReviews(@AuthenticationPrincipal UserDetails userDetails) {
-        List<ReviewResponse> reviewResponseList = reviewService.getMyReviews(userDetails.getUsername());
+    public ResponseEntity<APIResponse<PageResponse<ReviewResponse>>> getAllMyReviews(@AuthenticationPrincipal UserDetails userDetails, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<ReviewResponse> reviewResponseList = reviewService.getMyReviews(userDetails.getUsername(), pageable);
 
         return ResponseEntity.ok(APIResponse.success("Your reviews fetched successfully", reviewResponseList));
     }

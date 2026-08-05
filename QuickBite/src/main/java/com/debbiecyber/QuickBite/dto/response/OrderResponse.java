@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -18,13 +19,23 @@ public class OrderResponse {
 
     private String customerName;
 
+    private String customerPhoneNumber;
+
     private Long restaurantId;
 
     private String restaurantName;
 
+    private String restaurantPhoneNumber;
+
     private Long riderId;
 
     private String riderName;
+
+    private String riderPhoneNumber;
+
+    private String deliveryEvidenceUrl;
+
+    private String deliveryNotes;
 
     private OrderStatus orderStatus;
 
@@ -34,11 +45,11 @@ public class OrderResponse {
 
     private String deliveryAddress;
 
-    private Double subTotal;
+    private BigDecimal subTotal;
 
-    private Double deliveryFee;
+    private BigDecimal deliveryFee;
 
-    private Double totalAmount;
+    private BigDecimal totalAmount;
 
     private LocalDateTime createdAt;
 

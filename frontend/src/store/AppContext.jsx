@@ -179,6 +179,8 @@ export function AppProvider({ children }) {
       name: session.name,
       email: session.email,
       role: session.role,
+      accountStatus: session.accountStatus,
+      verificationStatus: session.verificationStatus,
     }
     localStorage.setItem(TOKEN_KEY, session.token)
     localStorage.setItem(SESSION_KEY, JSON.stringify(nextUser))
@@ -214,6 +216,15 @@ export function AppProvider({ children }) {
     setToast('You have been signed out.')
   }, [resetCart])
 
+  const updateSessionUser = useCallback((profile) => {
+    setUser((current) => {
+      if (!current) return current
+      const next = { ...current, ...profile }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   const cartRestaurant = useMemo(() => (
     restaurants.find((restaurant) => restaurant.id === cart[0]?.restaurantId)
       || (cart[0] ? {
@@ -240,11 +251,12 @@ export function AppProvider({ children }) {
     resetCart,
     authenticate,
     signOut,
+    updateSessionUser,
     setCartOpen,
     setAuthOpen,
     setToast,
     menuItems,
-  }), [cart, cartCount, cartTotal, cartRestaurant, user, isCartOpen, isAuthOpen, toast, addItem, updateQuantity, clearCart, syncCart, resetCart, authenticate, signOut])
+  }), [cart, cartCount, cartTotal, cartRestaurant, user, isCartOpen, isAuthOpen, toast, addItem, updateQuantity, clearCart, syncCart, resetCart, authenticate, signOut, updateSessionUser])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

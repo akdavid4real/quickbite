@@ -25,7 +25,7 @@ public class MenuController {
 
 
     @PostMapping("/{restaurantId}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<MenuItemResponse>> addMenuItem(@PathVariable Long restaurantId, @Valid @RequestBody MenuItemRequest menuItemRequest, @AuthenticationPrincipal UserDetails userDetails) {
         MenuItemResponse menuItemResponse = menuItemService.addMenuItem(restaurantId, menuItemRequest, userDetails.getUsername());
 
@@ -36,7 +36,7 @@ public class MenuController {
 
 
     @PutMapping("/{menuItemId}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<MenuItemResponse>> updateMenuItem(@PathVariable Long menuItemId, @Valid @RequestBody MenuItemRequest menuItemRequest, @AuthenticationPrincipal UserDetails userDetails) {
         MenuItemResponse menuItemResponse = menuItemService.updateMenuItem(menuItemId, menuItemRequest, userDetails.getUsername());
 
@@ -61,7 +61,7 @@ public class MenuController {
 
 
     @PatchMapping("/{menuItemId}/hideOrShow")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<MenuItemResponse>> hideOrShow(@PathVariable Long menuItemId, @AuthenticationPrincipal UserDetails userDetails) {
 
         MenuItemResponse menuItemResponseList = menuItemService.hideOrShow(menuItemId, userDetails.getUsername());
@@ -71,7 +71,7 @@ public class MenuController {
 
 
     @DeleteMapping("/{menuItemId}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public  ResponseEntity<APIResponse<MenuItemResponse>> deleteMenuItem(@PathVariable Long menuItemId, @AuthenticationPrincipal UserDetails userDetails) {
         menuItemService.deleteMenuItem(menuItemId, userDetails.getUsername());
 

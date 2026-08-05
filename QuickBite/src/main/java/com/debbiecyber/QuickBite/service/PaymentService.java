@@ -29,6 +29,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +48,9 @@ public class PaymentService {
     @Value("${paystack.base.url}")
     private String paystackBaseUrl;
 
+    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
 
     @Transactional
     public PaymentResponse initializePayment(PaymentRequest paymentRequest, String customerEmail) {
@@ -59,26 +64,36 @@ public class PaymentService {
         if (order.getPaymentMethod() == PaymentMethod.CASH_ON_DELIVERY) {
             throw new BadRequestException("This order has been set to payment on delivery. No online payment needed");
         }
-        if (paymentRepository.findByOrderId(order.getId()).isPresent()) {
-            throw new BadRequestException("Payment has already been initialized for this order");
+        Payment existingPayment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+        if (existingPayment != null && existingPayment.getStatus() == PaymentStatus.SUCCESS) {
+            throw new BadRequestException("This order has already been paid");
+        }
+        if (existingPayment != null && existingPayment.getStatus() == PaymentStatus.PENDING
+                && existingPayment.getAuthorizationUrl() != null) {
+            return mapToResponse(existingPayment, existingPayment.getAuthorizationUrl());
         }
 
         String reference = "QB_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
 
-        Payment payment = Payment.builder()
-                .order(order)
-                .reference(reference)
-                .amount(order.getTotalAmount())
-                .status(PaymentStatus.PENDING)
-                .paymentMethod(PaymentMethod.PAYSTACK)
-                .build();
-        paymentRepository.save(payment);
+        Payment payment = existingPayment == null
+                ? Payment.builder()
+                    .order(order)
+                    .reference(reference)
+                    .amount(order.getTotalAmount())
+                    .status(PaymentStatus.PENDING)
+                    .paymentMethod(PaymentMethod.PAYSTACK)
+                    .build()
+                : existingPayment;
+        payment.setReference(reference);
+        payment.setStatus(PaymentStatus.PENDING);
 
         String paymentUrl = callPaystackInitialize(
                 reference,
                 order.getTotalAmount(),
                 order.getCustomer().getEmail()
         );
+        payment.setAuthorizationUrl(paymentUrl);
+        paymentRepository.save(payment);
         return mapToResponse(payment, paymentUrl);
     }
 
@@ -95,7 +110,7 @@ public class PaymentService {
         }
 
         String event = (String) payload.get("event");
-        if (!"charge.success".equals(event)) {
+        if (!"charge.success".equals(event) && !"charge.failed".equals(event)) {
             return;
         }
 
@@ -106,8 +121,18 @@ public class PaymentService {
         String reference = (String) data.get("reference");
 
         Payment payment = paymentRepository.findByReference(reference).orElseThrow(()->new ResourceNotFoundException("Payment not found with reference: " + reference));
+        if ("charge.failed".equals(event)) {
+            if (payment.getStatus() != PaymentStatus.SUCCESS) {
+                payment.setStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
+            return;
+        }
         Number paidAmount = (Number) data.get("amount");
-        long expectedAmountInKobo = Math.round(payment.getAmount() * 100);
+        long expectedAmountInKobo = payment.getAmount()
+                .setScale(2, RoundingMode.HALF_UP)
+                .movePointRight(2)
+                .longValueExact();
         if (paidAmount == null || paidAmount.longValue() != expectedAmountInKobo) {
             throw new BadRequestException("Webhook payment amount does not match the order amount");
         }
@@ -139,7 +164,7 @@ public class PaymentService {
     }
 
 
-    private String callPaystackInitialize(String reference, double amount, String customerEmail) {
+    private String callPaystackInitialize(String reference, BigDecimal amount, String customerEmail) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -147,8 +172,9 @@ public class PaymentService {
 
             Map<String, Object> body = new HashMap<>();
             body.put("email", customerEmail);
-            body.put("amount", (int) (amount * 100));
+            body.put("amount", amount.setScale(2, RoundingMode.HALF_UP).movePointRight(2).longValueExact());
             body.put("reference", reference);
+            body.put("callback_url", frontendBaseUrl.replaceAll("/$", "") + "/orders?payment=return");
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 

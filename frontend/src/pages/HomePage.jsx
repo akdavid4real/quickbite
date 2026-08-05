@@ -2,6 +2,7 @@ import { ArrowRight, Check, ChefHat, Clock3, Coffee, CookingPot, CupSoda, Flame,
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import RestaurantRow from '../components/RestaurantRow'
+import PaginationControls from '../components/PaginationControls'
 import { categories, restaurants } from '../data'
 import { api } from '../lib/api'
 import { normalizeRestaurant } from '../lib/normalizers'
@@ -45,6 +46,8 @@ function ActiveOrderCard({ order, signedIn }) {
 export default function HomePage() {
   const [restaurantList, setRestaurantList] = useState(restaurants)
   const [activeOrder, setActiveOrder] = useState(null)
+  const [page, setPage] = useState(0)
+  const [pageInfo, setPageInfo] = useState({ totalPages: 1 })
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useApp()
   const query = searchParams.get('q')?.trim().toLowerCase() || ''
@@ -52,16 +55,18 @@ export default function HomePage() {
 
   useEffect(() => {
     let active = true
-    api.restaurants()
+    api.restaurantsPage(page)
       .then((result) => {
-        if (!active || !Array.isArray(result)) return
-        setRestaurantList(result.length > 0 ? result.map(normalizeRestaurant) : [])
+        if (!active) return
+        const items = result?.content || []
+        setRestaurantList(items.map(normalizeRestaurant))
+        setPageInfo(result || { totalPages: 1 })
       })
       .catch(() => {
         // Keep the local preview restaurants when the backend is unavailable.
       })
     return () => { active = false }
-  }, [])
+  }, [page])
 
   useEffect(() => {
     if (user?.role !== 'CUSTOMER') {
@@ -127,6 +132,7 @@ export default function HomePage() {
           <div className="restaurant-list">
             {visibleRestaurants.length === 0 ? <div className="restaurant-empty"><h3>No matching restaurants</h3><p>Try another search or category.</p></div> : visibleRestaurants.map((restaurant) => <RestaurantRow restaurant={restaurant} key={restaurant.id} />)}
           </div>
+          <PaginationControls page={page} totalPages={pageInfo.totalPages} onPageChange={setPage} label="restaurants" />
         </div>
         <ActiveOrderCard order={activeOrder} signedIn={Boolean(user)} />
       </section>

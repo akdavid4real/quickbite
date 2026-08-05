@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -17,7 +18,7 @@ public class PaymentResponse {
 
     private String reference;
 
-    private Double amount;
+    private BigDecimal amount;
 
     private PaymentStatus paymentStatus;
 

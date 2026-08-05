@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Data
@@ -31,8 +32,8 @@ public class Payment {
     @Column(nullable = false, unique = true)
     private String reference;
 
-    @Column(nullable = false)
-    private Double amount;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -42,6 +43,9 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
+
+    @Column(length = 1000)
+    private String authorizationUrl;
 
     @Column
     private LocalDateTime paidAt;

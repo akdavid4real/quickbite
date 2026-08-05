@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -13,7 +14,7 @@ public class CartResponse {
 
     private List<CartItemResponse> cartItems;
 
-    private Double totalAmount;
+    private BigDecimal totalAmount;
 
     private Integer totalQuantity;
 }

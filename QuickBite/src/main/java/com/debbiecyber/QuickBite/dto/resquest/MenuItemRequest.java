@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.math.BigDecimal;
 
 @Data
 public class MenuItemRequest {
@@ -19,7 +20,7 @@ public class MenuItemRequest {
 
     @NotNull(message = "Price is required")
     @Min(value = 1, message = "Price must be greater then 0")
-    private Double price;
+    private BigDecimal price;
 
     private String imageURL;
 }

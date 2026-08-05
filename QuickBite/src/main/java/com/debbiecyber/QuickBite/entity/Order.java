@@ -12,6 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,14 +59,14 @@ public class Order {
     @Column(nullable = false)
     private String deliveryAddress;
 
-    @Column(nullable = false)
-    private Double subTotal;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal subTotal;
 
-    @Column(nullable = false)
-    private Double deliveryFee;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal deliveryFee;
 
-    @Column(nullable = false)
-    private Double totalAmount;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalAmount;
 
     @CreationTimestamp
     @Column(updatable = false)

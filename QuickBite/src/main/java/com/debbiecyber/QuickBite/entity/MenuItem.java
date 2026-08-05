@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Data
@@ -36,8 +37,8 @@ public class MenuItem {
     @Column(nullable = false)
     private String category;
 
-    @Column(nullable = false)
-    private Double price;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
 
     @Column
     private String imageURL;

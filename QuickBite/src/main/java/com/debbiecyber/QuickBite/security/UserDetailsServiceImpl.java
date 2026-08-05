@@ -3,6 +3,7 @@ package com.debbiecyber.QuickBite.security;
 
 import com.debbiecyber.QuickBite.entity.User;
 import com.debbiecyber.QuickBite.repository.UserRepository;
+import com.debbiecyber.QuickBite.enums.AccountStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,13 +22,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email).orElseThrow(() ->new UsernameNotFoundException("User with email " + email + ", not found."));
 
-        SimpleGrantedAuthority authority =
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-        );
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
+                .disabled(user.getAccountStatus() == AccountStatus.SUSPENDED)
+                .build();
     }
 }

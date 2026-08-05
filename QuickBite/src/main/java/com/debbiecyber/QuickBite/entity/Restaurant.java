@@ -2,6 +2,7 @@ package com.debbiecyber.QuickBite.entity;
 
 
 import com.debbiecyber.QuickBite.enums.CuisineType;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,6 +61,11 @@ public class Restaurant {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isOpen = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'VERIFIED'")
+    @Builder.Default
+    private VerificationStatus verificationStatus = VerificationStatus.VERIFIED;
 
     @CreationTimestamp
     @Column(updatable = false)

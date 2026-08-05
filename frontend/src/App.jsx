@@ -9,6 +9,7 @@ import OrdersPage from './pages/OrdersPage'
 import OwnerDashboard from './pages/OwnerDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import RiderDashboard from './pages/RiderDashboard'
+import AccountPage from './features/account/AccountPage'
 
 function CustomerShell({ children }) {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/" element={<CustomerShell><HomePage /></CustomerShell>} />
         <Route path="/restaurants/:restaurantId" element={<CustomerShell><RestaurantPage /></CustomerShell>} />
         <Route path="/orders" element={<CustomerShell><OrdersPage /></CustomerShell>} />
+        <Route path="/account" element={<AccountPage />} />
         <Route path="/owner" element={<OwnerDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/rider" element={<RiderDashboard />} />

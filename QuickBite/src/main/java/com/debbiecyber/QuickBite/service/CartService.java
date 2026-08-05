@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -103,7 +104,7 @@ public class CartService {
             return CartResponse.builder()
                     .cartId(null)
                     .cartItems(List.of())
-                    .totalAmount(0.0)
+                    .totalAmount(BigDecimal.ZERO)
                     .totalQuantity(0)
                     .build();
         }
@@ -147,8 +148,8 @@ public class CartService {
         List<CartItemResponse> cartItemResponseList = new ArrayList<>();
 
         for (CartItem cartItem : cart.getCartItems()) {
-            double subtotal = cartItem.getMenuItem().getPrice()
-                    * cartItem.getQuantity();
+            BigDecimal subtotal = cartItem.getMenuItem().getPrice()
+                    .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
             CartItemResponse itemResponse = CartItemResponse.builder()
                     .cartItemId(cartItem.getId())
@@ -166,9 +167,9 @@ public class CartService {
             cartItemResponseList.add(itemResponse);
         }
 
-        double totalAmount = 0.0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
         for (CartItemResponse item : cartItemResponseList) {
-            totalAmount += item.getSubTotal();
+            totalAmount = totalAmount.add(item.getSubTotal());
         }
 
         int totalItems = 0;

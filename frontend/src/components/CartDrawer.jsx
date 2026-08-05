@@ -21,10 +21,11 @@ export default function CartDrawer() {
   } = useApp()
   const [checkout, setCheckout] = useState(false)
   const [placingOrder, setPlacingOrder] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState([])
   const navigate = useNavigate()
   const deliveryFee = cartRestaurant?.deliveryFee
 
-  function beginCheckout() {
+  async function beginCheckout() {
     if (!user) {
       setCartOpen(false)
       setAuthOpen(true)
@@ -36,6 +37,12 @@ export default function CartDrawer() {
       return
     }
     setCheckout(true)
+    try {
+      const result = await api.savedAddresses()
+      setSavedAddresses(Array.isArray(result) ? result : [])
+    } catch {
+      setSavedAddresses([])
+    }
   }
 
   async function placeOrder(event) {
@@ -116,7 +123,9 @@ export default function CartDrawer() {
             </div>
             {checkout ? (
               <form className="checkout-form" onSubmit={placeOrder}>
-                <label>Delivery address<input name="deliveryAddress" required minLength={8} placeholder="Street, area, Lagos" /></label>
+                {savedAddresses.length > 0 ? (
+                  <label>Delivery address<select name="deliveryAddress" defaultValue={savedAddresses.find((address) => address.isDefault)?.address || savedAddresses[0].address}>{savedAddresses.map((address) => <option value={address.address} key={address.id}>{address.label} · {address.address}</option>)}</select></label>
+                ) : <label>Delivery address<input name="deliveryAddress" defaultValue={user?.address || ''} required minLength={8} placeholder="Street, area, Lagos" /></label>}
                 <label>Payment method<select name="paymentMethod" defaultValue="CASH_ON_DELIVERY"><option value="CASH_ON_DELIVERY">Cash on delivery</option><option value="PAYSTACK">Pay with Paystack</option></select></label>
                 <p className="delivery-note">The exact delivery fee is calculated from this address when your order is placed.</p>
                 <button className="primary-button full-button" disabled={placingOrder} type="submit">{placingOrder ? 'Placing order…' : 'Place order'}</button>

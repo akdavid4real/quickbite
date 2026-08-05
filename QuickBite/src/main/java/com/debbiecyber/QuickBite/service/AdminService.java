@@ -8,6 +8,9 @@ import com.debbiecyber.QuickBite.entity.*;
 import com.debbiecyber.QuickBite.enums.OrderStatus;
 import com.debbiecyber.QuickBite.enums.PaymentStatus;
 import com.debbiecyber.QuickBite.enums.UserRole;
+import com.debbiecyber.QuickBite.enums.AccountStatus;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
+import com.debbiecyber.QuickBite.exceptions.BadRequestException;
 import com.debbiecyber.QuickBite.exceptions.ResourceNotFoundException;
 import com.debbiecyber.QuickBite.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -76,9 +81,62 @@ public class AdminService {
     }
 
 
+    public PageResponse<UserResponse> getUsers(UserRole role, Pageable pageable) {
+        return role == null
+                ? PageResponse.from(userRepository.findAll(pageable), this::mapUserToResponse)
+                : PageResponse.from(userRepository.findByRole(role, pageable), this::mapUserToResponse);
+    }
+
     public UserResponse getUserById(Long userId) {
         User users = userRepository.findById(userId).orElseThrow(()-> new ResourceNotFoundException("User not found"));
         return mapUserToResponse(users);
+    }
+
+    public PageResponse<UserResponse> getProvidersPendingApproval(Pageable pageable) {
+        return PageResponse.from(userRepository.findByAccountStatusAndVerificationStatusAndRoleIn(
+                AccountStatus.PENDING_APPROVAL,
+                VerificationStatus.VERIFIED,
+                List.of(UserRole.RESTAURANT_OWNER, UserRole.RIDER),
+                pageable
+        ), this::mapUserToResponse);
+    }
+
+    @Transactional
+    public UserResponse approveProvider(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() != UserRole.RESTAURANT_OWNER && user.getRole() != UserRole.RIDER) {
+            throw new BadRequestException("Only restaurant owners and riders require provider approval");
+        }
+        if (user.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new BadRequestException("Provider identity must be verified before approval");
+        }
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        return mapUserToResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse suspendUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() == UserRole.ADMIN) {
+            throw new BadRequestException("Administrator accounts cannot be suspended from this endpoint");
+        }
+        user.setAccountStatus(AccountStatus.SUSPENDED);
+        user.setAvailableForDelivery(false);
+        return mapUserToResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse reactivateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        boolean provider = user.getRole() == UserRole.RESTAURANT_OWNER || user.getRole() == UserRole.RIDER;
+        if (provider && user.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new BadRequestException("Provider identity must be verified before reactivation");
+        }
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        return mapUserToResponse(userRepository.save(user));
     }
 
 
@@ -112,6 +170,34 @@ public class AdminService {
     }
 
 
+    public PageResponse<RestaurantResponse> getRestaurants(Pageable pageable) {
+        return PageResponse.from(restaurantRepository.findAll(pageable), this::mapRestaurantToResponse);
+    }
+
+    public PageResponse<RestaurantResponse> getRestaurantsPendingApproval(Pageable pageable) {
+        return PageResponse.from(
+                restaurantRepository.findByVerificationStatus(VerificationStatus.PENDING, pageable),
+                this::mapRestaurantToResponse
+        );
+    }
+
+    @Transactional
+    public RestaurantResponse approveRestaurant(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+        restaurant.setVerificationStatus(VerificationStatus.VERIFIED);
+        return mapRestaurantToResponse(restaurantRepository.save(restaurant));
+    }
+
+    @Transactional
+    public RestaurantResponse rejectRestaurant(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+        restaurant.setVerificationStatus(VerificationStatus.REJECTED);
+        restaurant.setIsOpen(false);
+        return mapRestaurantToResponse(restaurantRepository.save(restaurant));
+    }
+
     @Transactional
     public void deleteRestaurant(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(()-> new ResourceNotFoundException("Restaurant not found"));
@@ -129,6 +215,29 @@ public class AdminService {
         return orderResponseList;
     }
 
+
+    public PageResponse<OrderResponse> getOrders(OrderStatus status, Pageable pageable) {
+        return PageResponse.from(
+                status == null ? orderRepository.findAll(pageable) : orderRepository.findByOrderStatus(status, pageable),
+                order -> mapOrderToResponse(order, orderItemRepository.findByOrderId(order.getId()))
+        );
+    }
+
+    @Transactional
+    public OrderResponse resolveOrder(Long orderId, OrderStatus requestedStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        boolean allowed = requestedStatus == OrderStatus.CANCELLED
+                && order.getOrderStatus() != OrderStatus.DELIVERED
+                && order.getOrderStatus() != OrderStatus.CANCELLED;
+        allowed = allowed || (requestedStatus == OrderStatus.DELIVERED
+                && order.getOrderStatus() == OrderStatus.OUT_FOR_DELIVERY);
+        if (!allowed) {
+            throw new BadRequestException("Administrators may cancel an active order or resolve an out-for-delivery order as delivered");
+        }
+        order.setOrderStatus(requestedStatus);
+        return mapOrderToResponse(orderRepository.save(order), orderItemRepository.findByOrderId(orderId));
+    }
 
     public List<OrderResponse> getOrdersByStatus(OrderStatus orderStatus) {
         List<Order> orderList = orderRepository.findByOrderStatus(orderStatus);
@@ -151,10 +260,19 @@ public class AdminService {
     }
 
 
+    public PageResponse<ReviewResponse> getReviews(Pageable pageable) {
+        return PageResponse.from(reviewRepository.findAll(pageable), this::mapReviewToResponse);
+    }
+
     @Transactional
     public void deleteReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId).orElseThrow(()-> new ResourceNotFoundException("Review not found"));
+        Restaurant restaurant = review.getRestaurant();
         reviewRepository.delete(review);
+        reviewRepository.flush();
+        Double average = reviewRepository.findAverageRatingByRestaurantId(restaurant.getId());
+        restaurant.setRating(average == null ? 0.0 : Math.round(average * 10.0) / 10.0);
+        restaurantRepository.save(restaurant);
     }
 
 
@@ -180,6 +298,9 @@ public class AdminService {
                 .email(users.getEmail())
                 .phoneNumber(users.getPhoneNumber())
                 .role(users.getRole())
+                .accountStatus(users.getAccountStatus())
+                .verificationStatus(users.getVerificationStatus())
+                .availableForDelivery(users.getAvailableForDelivery())
                 .address(users.getAddress())
                 .createdAt(users.getCreatedAt())
                 .build();
@@ -199,6 +320,7 @@ public class AdminService {
                 .logoURL(restaurants.getLogoURL())
                 .rating(restaurants.getRating())
                 .isOpen(restaurants.getIsOpen())
+                .verificationStatus(restaurants.getVerificationStatus())
                 .build();
     }
 
@@ -207,7 +329,8 @@ public class AdminService {
         List<OrderItemResponse> orderItemResponseList = new ArrayList<>();
 
         for (OrderItem orderItems : orderItemLists) {
-            double subTotal = orderItems.getPriceAtOrder() * orderItems.getQuantity();
+            BigDecimal subTotal = orderItems.getPriceAtOrder()
+                    .multiply(BigDecimal.valueOf(orderItems.getQuantity()));
             orderItemResponseList.add(OrderItemResponse.builder()
                     .id(orderItems.getId())
                     .itemName(orderItems.getItemName())
@@ -219,19 +342,24 @@ public class AdminService {
 
         Long riderId = null;
         String riderName = null;
+        String riderPhoneNumber = null;
         if (order.getRider() != null) {
             riderId = order.getRider().getId();
             riderName =  order.getRider().getName();
+            riderPhoneNumber = order.getRider().getPhoneNumber();
         }
 
         return OrderResponse.builder()
                 .id(order.getId())
                 .customerId(order.getCustomer().getId())
                 .customerName(order.getCustomer().getName())
+                .customerPhoneNumber(order.getCustomer().getPhoneNumber())
                 .restaurantId(order.getRestaurant().getId())
                 .restaurantName(order.getRestaurant().getName())
+                .restaurantPhoneNumber(order.getRestaurant().getPhoneNumber())
                 .riderId(riderId)
                 .riderName(riderName)
+                .riderPhoneNumber(riderPhoneNumber)
                 .orderItems(orderItemResponseList)
                 .orderStatus(order.getOrderStatus())
                 .paymentMethod(order.getPaymentMethod())

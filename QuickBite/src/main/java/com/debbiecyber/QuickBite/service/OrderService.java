@@ -3,7 +3,10 @@ package com.debbiecyber.QuickBite.service;
 
 import com.debbiecyber.QuickBite.dto.response.OrderResponse;
 import com.debbiecyber.QuickBite.dto.response.OrderItemResponse;
+import com.debbiecyber.QuickBite.dto.response.PageResponse;
 import com.debbiecyber.QuickBite.dto.resquest.OrderRequest;
+import com.debbiecyber.QuickBite.dto.resquest.DeliveryProofRequest;
+import com.debbiecyber.QuickBite.dto.response.RiderSummaryResponse;
 import com.debbiecyber.QuickBite.entity.*;
 import com.debbiecyber.QuickBite.enums.OrderStatus;
 import com.debbiecyber.QuickBite.enums.PaymentMethod;
@@ -15,9 +18,11 @@ import com.debbiecyber.QuickBite.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final MapService mapService;
+    private final DeliveryProofRepository deliveryProofRepository;
 
 
     @Transactional
@@ -50,7 +56,7 @@ public class OrderService {
         if (!restaurant.getIsOpen()) {throw new BadRequestException("Sorry " + restaurant.getName() + " is not open. Please try again later");
         }
 
-        double subtotal = 0.0;
+        BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem cartItem : cart.getCartItems()) {
             if (!cartItem.getMenuItem().getRestaurant().getId().equals(restaurant.getId())) {
                 throw new BadRequestException("All cart items must belong to the same restaurant");
@@ -58,12 +64,15 @@ public class OrderService {
             if (!cartItem.getMenuItem().getIsAvailable()) {
                 throw new BadRequestException(cartItem.getMenuItem().getName() + " is currently unavailable");
             }
-            subtotal += cartItem.getMenuItem().getPrice() * cartItem.getQuantity();
+            subtotal = subtotal.add(cartItem.getMenuItem().getPrice()
+                    .multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         }
 
-        double deliveryFee = mapService.calculateDeliveryFee(restaurant.getAddress(), orderRequest.getDeliveryAddress());
+        BigDecimal deliveryFee = BigDecimal.valueOf(
+                mapService.calculateDeliveryFee(restaurant.getAddress(), orderRequest.getDeliveryAddress())
+        );
 
-        double totalAmount = subtotal + deliveryFee;
+        BigDecimal totalAmount = subtotal.add(deliveryFee);
 
         Order order = Order.builder()
                 .customer(customer)
@@ -113,54 +122,52 @@ public class OrderService {
     }
 
 
-    public List<OrderResponse> getMyOrders(String customerEmail) {
+    public PageResponse<OrderResponse> getMyOrders(String customerEmail, Pageable pageable) {
         User customer = userRepository.findByEmail(customerEmail).orElseThrow(()-> new ResourceNotFoundException("Customer not found"));
-
-        List<Order> orders = orderRepository.findByCustomerId(customer.getId());
-
-        List<OrderResponse> orderResponseList = new ArrayList<>();
-        for (Order order : orders) {
-            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
-            orderResponseList.add(mapToResponse(order, orderItems));
-        }
-        return orderResponseList;
+        return PageResponse.from(orderRepository.findByCustomerId(customer.getId(), pageable),
+                order -> mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
     }
 
 
-    public List<OrderResponse> getRestaurantOrders(Long restaurantId, String ownerEmail) {
+    public PageResponse<OrderResponse> getRestaurantOrders(Long restaurantId, String ownerEmail, Pageable pageable) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (!restaurant.getOwner().getEmail().equals(ownerEmail)) {
             throw new UnauthorizedException("You don't have permission to view this order");
         }
 
-        List<Order> orders = orderRepository.findByRestaurantId(restaurantId);
-
-        List<OrderResponse> orderResponseList = new ArrayList<>();
-        for (Order order : orders) {
-            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
-            orderResponseList.add(mapToResponse(order, orderItems));
-        }
-        return orderResponseList;
+        return PageResponse.from(orderRepository.findByRestaurantId(restaurantId, pageable),
+                order -> mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
     }
 
-    public List<OrderResponse> getAvailableDeliveries() {
-        List<Order> orders = orderRepository.findByOrderStatusAndRiderIsNull(OrderStatus.READY_FOR_PICKUP);
-        List<OrderResponse> responses = new ArrayList<>();
-        for (Order order : orders) {
-            responses.add(mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
+    @Transactional
+    public OrderResponse cancelOrder(Long orderId, String customerEmail) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (!order.getCustomer().getEmail().equals(customerEmail)) {
+            throw new ResourceNotFoundException("Order not found");
         }
-        return responses;
+        boolean cancellable = order.getOrderStatus() == OrderStatus.PENDING
+                || (order.getOrderStatus() == OrderStatus.CONFIRMED
+                && order.getPaymentMethod() == PaymentMethod.CASH_ON_DELIVERY);
+        if (!cancellable) {
+            throw new BadRequestException("This order can no longer be cancelled automatically. Contact support for help.");
+        }
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        Order updated = orderRepository.save(order);
+        return mapToResponse(updated, orderItemRepository.findByOrderId(orderId));
     }
 
-    public List<OrderResponse> getRiderDeliveries(String riderEmail) {
+    public PageResponse<OrderResponse> getAvailableDeliveries(Pageable pageable) {
+        return PageResponse.from(orderRepository.findByOrderStatusAndRiderIsNull(OrderStatus.READY_FOR_PICKUP, pageable),
+                order -> mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
+    }
+
+    public PageResponse<OrderResponse> getRiderDeliveries(String riderEmail, Pageable pageable) {
         User rider = userRepository.findByEmail(riderEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Rider not found"));
-        List<OrderResponse> responses = new ArrayList<>();
-        for (Order order : orderRepository.findByRiderId(rider.getId())) {
-            responses.add(mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
-        }
-        return responses;
+        return PageResponse.from(orderRepository.findByRiderId(rider.getId(), pageable),
+                order -> mapToResponse(order, orderItemRepository.findByOrderId(order.getId())));
     }
 
 
@@ -175,6 +182,9 @@ public class OrderService {
         boolean isRider = order.getRider() != null && order.getRider().getEmail().equals(userEmail);
 
         if (!isOwner && !isRider) {throw new UnauthorizedException("You do not have permission to update this order.");
+        }
+        if (isRider && newStatus == OrderStatus.DELIVERED) {
+            throw new BadRequestException("Submit delivery evidence to complete this delivery");
         }
         validateStatusTransition(order, newStatus, user.getRole());
 
@@ -204,6 +214,9 @@ public class OrderService {
         User rider = userRepository.findByEmail(riderEmail)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rider not found with email: " + riderEmail));
+        if (rider.getRole() != UserRole.RIDER || !Boolean.TRUE.equals(rider.getAvailableForDelivery())) {
+            throw new BadRequestException("Set your rider status to available before accepting a delivery");
+        }
 
         order.setRider(rider);
         order.setOrderStatus(OrderStatus.OUT_FOR_DELIVERY);
@@ -211,6 +224,49 @@ public class OrderService {
 
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
         return mapToResponse(updated, orderItems);
+    }
+
+    @Transactional
+    public RiderSummaryResponse setRiderAvailability(String riderEmail, boolean available) {
+        User rider = userRepository.findByEmail(riderEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Rider not found"));
+        rider.setAvailableForDelivery(available);
+        userRepository.save(rider);
+        return getRiderSummary(riderEmail);
+    }
+
+    public RiderSummaryResponse getRiderSummary(String riderEmail) {
+        User rider = userRepository.findByEmail(riderEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Rider not found"));
+        List<Order> deliveries = orderRepository.findByRiderId(rider.getId());
+        long completed = deliveries.stream().filter(order -> order.getOrderStatus() == OrderStatus.DELIVERED).count();
+        long active = deliveries.stream().filter(order -> order.getOrderStatus() == OrderStatus.OUT_FOR_DELIVERY).count();
+        BigDecimal earnings = deliveries.stream()
+                .filter(order -> order.getOrderStatus() == OrderStatus.DELIVERED)
+                .map(Order::getDeliveryFee)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return RiderSummaryResponse.builder().availableForDelivery(rider.getAvailableForDelivery())
+                .activeDeliveries(active).completedDeliveries(completed).totalDeliveryEarnings(earnings).build();
+    }
+
+    @Transactional
+    public OrderResponse submitDeliveryProof(Long orderId, String riderEmail, DeliveryProofRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (order.getRider() == null || !order.getRider().getEmail().equals(riderEmail)) {
+            throw new ResourceNotFoundException("Delivery not found");
+        }
+        if (order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+            throw new BadRequestException("Only an out-for-delivery order can be completed");
+        }
+        if (deliveryProofRepository.existsByOrderId(orderId)) {
+            throw new BadRequestException("Delivery evidence has already been submitted");
+        }
+        deliveryProofRepository.save(DeliveryProof.builder().order(order)
+                .evidenceUrl(request.getEvidenceUrl()).notes(request.getNotes())
+                .submittedAt(java.time.LocalDateTime.now()).build());
+        order.setOrderStatus(OrderStatus.DELIVERED);
+        return mapToResponse(orderRepository.save(order), orderItemRepository.findByOrderId(orderId));
     }
 
 
@@ -250,8 +306,8 @@ public class OrderService {
 
         List<OrderItemResponse> itemResponses = new ArrayList<>();
         for (OrderItem orderItem : orderItems) {
-            double subtotal = orderItem.getPriceAtOrder()
-                    * orderItem.getQuantity();
+            BigDecimal subtotal = orderItem.getPriceAtOrder()
+                    .multiply(BigDecimal.valueOf(orderItem.getQuantity()));
 
             OrderItemResponse itemResponse = OrderItemResponse.builder()
                     .id(orderItem.getId())
@@ -266,19 +322,27 @@ public class OrderService {
 
         Long riderId = null;
         String riderName = null;
+        String riderPhoneNumber = null;
         if (order.getRider() != null) {
             riderId = order.getRider().getId();
             riderName = order.getRider().getName();
+            riderPhoneNumber = order.getRider().getPhoneNumber();
         }
+        DeliveryProof deliveryProof = deliveryProofRepository.findByOrderId(order.getId()).orElse(null);
 
         return OrderResponse.builder()
                 .id(order.getId())
                 .customerId(order.getCustomer().getId())
                 .customerName(order.getCustomer().getName())
+                .customerPhoneNumber(order.getCustomer().getPhoneNumber())
                 .restaurantId(order.getRestaurant().getId())
                 .restaurantName(order.getRestaurant().getName())
+                .restaurantPhoneNumber(order.getRestaurant().getPhoneNumber())
                 .riderId(riderId)
                 .riderName(riderName)
+                .riderPhoneNumber(riderPhoneNumber)
+                .deliveryEvidenceUrl(deliveryProof == null ? null : deliveryProof.getEvidenceUrl())
+                .deliveryNotes(deliveryProof == null ? null : deliveryProof.getNotes())
                 .orderItems(itemResponses)
                 .orderStatus(order.getOrderStatus())
                 .paymentMethod(order.getPaymentMethod())

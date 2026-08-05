@@ -1,8 +1,10 @@
-import { Check, ChefHat, LocateFixed, PackageCheck, Truck } from 'lucide-react'
+import { Check, ChefHat, LocateFixed, PackageCheck, Phone, RefreshCw, Star, Truck, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { restaurants } from '../data'
 import { api } from '../lib/api'
 import { useApp } from '../store/AppContext'
+import OrderReviewForm from '../features/reviews/OrderReviewForm'
+import PaginationControls from '../components/PaginationControls'
 
 const steps = [
   { label: 'Confirmed', icon: <Check /> },
@@ -32,12 +34,31 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-function OrderCard({ order }) {
+function OrderCard({ order, reviewed, onCancelled, onReview, onToast }) {
   const fallbackRestaurant = restaurants.find((restaurant) => restaurant.id === order.restaurantId)
   const image = fallbackRestaurant?.image || '/assets/hero-jollof.png'
   const itemSummary = order.orderItems?.map((item) => `${item.quantity}× ${item.itemName}`).join(', ') || 'Order items'
   const activeStage = statusStage[order.orderStatus] ?? 0
   const cancelled = order.orderStatus === 'CANCELLED'
+  const cancellable = order.orderStatus === 'PENDING' || (order.orderStatus === 'CONFIRMED' && order.paymentMethod === 'CASH_ON_DELIVERY')
+
+  async function cancel() {
+    try {
+      onCancelled(await api.cancelOrder(order.id))
+      onToast(`Order #${order.id} cancelled.`)
+    } catch (error) {
+      onToast(error.message)
+    }
+  }
+
+  async function retryPayment() {
+    try {
+      const payment = await api.initializePayment(order.id)
+      if (payment.paymentURL) window.location.assign(payment.paymentURL)
+    } catch (error) {
+      onToast(error.message)
+    }
+  }
 
   return (
     <article className={cancelled ? 'order-detail-card cancelled-order' : 'order-detail-card'}>
@@ -71,15 +92,26 @@ function OrderCard({ order }) {
           <span>{order.riderName ? `${order.riderName} is handling your delivery.` : 'Your rider will appear here after pickup.'}</span>
         </div>
       </div>
+      <div className="order-actions">
+        {order.restaurantPhoneNumber ? <a className="secondary-button" href={`tel:${order.restaurantPhoneNumber}`}><Phone />Call restaurant</a> : null}
+        {order.riderPhoneNumber ? <a className="secondary-button" href={`tel:${order.riderPhoneNumber}`}><Phone />Call rider</a> : null}
+        {order.paymentMethod === 'PAYSTACK' && order.orderStatus === 'PENDING' ? <button className="secondary-button" type="button" onClick={retryPayment}><RefreshCw />Retry payment</button> : null}
+        {cancellable ? <button className="danger-button" type="button" onClick={cancel}><XCircle />Cancel order</button> : null}
+        {order.orderStatus === 'DELIVERED' && !reviewed ? <OrderReviewForm order={order} onSubmitted={onReview} onToast={onToast} /> : null}
+        {reviewed ? <span className="reviewed-chip"><Star size={15} />Reviewed</span> : null}
+      </div>
     </article>
   )
 }
 
 export default function OrdersPage() {
-  const { setAuthOpen, user } = useApp()
+  const { setAuthOpen, setToast, user } = useApp()
   const [orders, setOrders] = useState([])
+  const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageInfo, setPageInfo] = useState({ totalPages: 1 })
   const userId = user?.id
 
   useEffect(() => {
@@ -91,11 +123,13 @@ export default function OrdersPage() {
     let active = true
     setLoading(true)
     setError('')
-    api.myOrders()
-      .then((result) => {
+    Promise.all([api.myOrdersPage(page), api.myReviews()])
+      .then(([result, reviewResult]) => {
         if (!active) return
-        const nextOrders = Array.isArray(result) ? result : []
+        const nextOrders = result?.content || []
         setOrders(nextOrders.toSorted((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
+        setPageInfo(result || { totalPages: 1 })
+        setReviews(Array.isArray(reviewResult) ? reviewResult : [])
       })
       .catch((requestError) => {
         if (active) setError(requestError.message)
@@ -105,7 +139,15 @@ export default function OrdersPage() {
       })
 
     return () => { active = false }
-  }, [userId, user?.role])
+  }, [page, userId, user?.role])
+
+  function orderCancelled(updated) {
+    setOrders((current) => current.map((order) => order.id === updated.id ? updated : order))
+  }
+
+  function reviewSubmitted(review) {
+    setReviews((current) => [...current, review])
+  }
 
   return (
     <section className="orders-page page-shell">
@@ -141,7 +183,8 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="orders-list">
-          {orders.map((order) => <OrderCard order={order} key={order.id} />)}
+          {orders.map((order) => <OrderCard order={order} reviewed={reviews.some((review) => review.orderId === order.id)} onCancelled={orderCancelled} onReview={reviewSubmitted} onToast={setToast} key={order.id} />)}
+          <PaginationControls page={page} totalPages={pageInfo.totalPages} onPageChange={setPage} label="orders" />
         </div>
       )}
     </section>

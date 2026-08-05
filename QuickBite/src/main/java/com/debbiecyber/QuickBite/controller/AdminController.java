@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.List;
 
@@ -34,14 +37,8 @@ public class AdminController {
 
 
     @GetMapping("/users")
-    public ResponseEntity<APIResponse<List<UserResponse>>> getAllUsers(@RequestParam(required = false)UserRole role) {
-        List<UserResponse> userResponseList;
-        if (role != null) {
-            userResponseList = adminService.getUserByRole(role);
-        } else {
-            userResponseList = adminService.getAllUsers();
-        }
-        return ResponseEntity.ok(APIResponse.success("Users fetched successfully", userResponseList));
+    public ResponseEntity<APIResponse<PageResponse<UserResponse>>> getAllUsers(@RequestParam(required = false) UserRole role, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success("Users fetched successfully", adminService.getUsers(role, pageable)));
     }
 
 
@@ -50,6 +47,29 @@ public class AdminController {
         UserResponse userResponse = adminService.getUserById(id);
 
         return  ResponseEntity.ok(success("User fetched successfully", userResponse));
+    }
+
+    @GetMapping("/providers/pending-approval")
+    public ResponseEntity<APIResponse<PageResponse<UserResponse>>> getProvidersPendingApproval(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success(
+                "Providers pending approval fetched successfully",
+                adminService.getProvidersPendingApproval(pageable)
+        ));
+    }
+
+    @PatchMapping("/users/{id}/approve-provider")
+    public ResponseEntity<APIResponse<UserResponse>> approveProvider(@PathVariable Long id) {
+        return ResponseEntity.ok(APIResponse.success("Provider approved successfully", adminService.approveProvider(id)));
+    }
+
+    @PatchMapping("/users/{id}/suspend")
+    public ResponseEntity<APIResponse<UserResponse>> suspendUser(@PathVariable Long id) {
+        return ResponseEntity.ok(APIResponse.success("User suspended successfully", adminService.suspendUser(id)));
+    }
+
+    @PatchMapping("/users/{id}/reactivate")
+    public ResponseEntity<APIResponse<UserResponse>> reactivateUser(@PathVariable Long id) {
+        return ResponseEntity.ok(APIResponse.success("User reactivated successfully", adminService.reactivateUser(id)));
     }
 
 
@@ -70,10 +90,8 @@ public class AdminController {
 
 
     @GetMapping("/restaurants")
-    public ResponseEntity<APIResponse<List<RestaurantResponse>>> getAllRestaurants() {
-        List<RestaurantResponse> restaurantResponseList = adminService.getAllRestaurants();
-
-        return ResponseEntity.ok(APIResponse.success("Restaurants fetched successfully", restaurantResponseList));
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> getAllRestaurants(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success("Restaurants fetched successfully", adminService.getRestaurants(pageable)));
     }
 
 
@@ -86,22 +104,34 @@ public class AdminController {
 
 
     @GetMapping("/orders")
-    public ResponseEntity<APIResponse<List<OrderResponse>>> getAllOrders(@RequestParam(required = false) OrderStatus orderStatus) {
-        List<OrderResponse> orderResponseList;
-        if (orderStatus != null) {
-            orderResponseList = adminService.getOrdersByStatus(orderStatus);
-        } else {
-            orderResponseList = adminService.getAllOrders();
-        }
-        return  ResponseEntity.ok(APIResponse.success("Orders fetched successfully", orderResponseList));
+    public ResponseEntity<APIResponse<PageResponse<OrderResponse>>> getAllOrders(@RequestParam(required = false) OrderStatus orderStatus, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success("Orders fetched successfully", adminService.getOrders(orderStatus, pageable)));
     }
 
 
     @GetMapping("/reviews")
-    public ResponseEntity<APIResponse<List<ReviewResponse>>> getAllReviews() {
-        List<ReviewResponse> reviewResponseList = adminService.getAllReviews();
+    public ResponseEntity<APIResponse<PageResponse<ReviewResponse>>> getAllReviews(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success("Reviews fetched successfully", adminService.getReviews(pageable)));
+    }
 
-        return ResponseEntity.ok(APIResponse.success("Reviews fetched successfully", reviewResponseList));
+    @GetMapping("/restaurants/pending-approval")
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> getRestaurantsPendingApproval(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(APIResponse.success("Restaurants pending approval fetched successfully", adminService.getRestaurantsPendingApproval(pageable)));
+    }
+
+    @PatchMapping("/restaurants/{id}/approve")
+    public ResponseEntity<APIResponse<RestaurantResponse>> approveRestaurant(@PathVariable Long id) {
+        return ResponseEntity.ok(APIResponse.success("Restaurant approved successfully", adminService.approveRestaurant(id)));
+    }
+
+    @PatchMapping("/restaurants/{id}/reject")
+    public ResponseEntity<APIResponse<RestaurantResponse>> rejectRestaurant(@PathVariable Long id) {
+        return ResponseEntity.ok(APIResponse.success("Restaurant rejected", adminService.rejectRestaurant(id)));
+    }
+
+    @PatchMapping("/orders/{id}/resolve")
+    public ResponseEntity<APIResponse<OrderResponse>> resolveOrder(@PathVariable Long id, @RequestParam OrderStatus orderStatus) {
+        return ResponseEntity.ok(APIResponse.success("Order resolved successfully", adminService.resolveOrder(id, orderStatus)));
     }
 
 

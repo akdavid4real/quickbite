@@ -2,6 +2,7 @@ package com.debbiecyber.QuickBite.dto.response;
 
 
 import com.debbiecyber.QuickBite.enums.CuisineType;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -30,6 +31,8 @@ public class RestaurantResponse {
     private Double rating;
 
     private Boolean isOpen;
+
+    private VerificationStatus verificationStatus;
 
 
 }

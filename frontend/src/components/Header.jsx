@@ -1,10 +1,10 @@
-import { LogOut, MapPin, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
+import { MapPin, Menu, Search, ShoppingBag, UserRound, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 
 export default function Header() {
-  const { cartCount, setCartOpen, setAuthOpen, signOut, user } = useApp()
+  const { cartCount, setCartOpen, setAuthOpen, user } = useApp()
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -39,14 +39,14 @@ export default function Header() {
             {cartCount > 0 ? <b>{cartCount}</b> : null}
           </button>
           <button
-            aria-label={user ? `Sign out ${user.name}` : 'Sign in or create an account'}
+            aria-label={user ? `Manage ${user.name}'s account` : 'Sign in or create an account'}
             className="icon-label-button account-button"
-            title={user ? 'Sign out' : 'Account'}
+            title="Account"
             type="button"
-            onClick={user ? signOut : () => setAuthOpen(true)}
+            onClick={user ? () => navigate('/account') : () => setAuthOpen(true)}
           >
-            {user ? <LogOut size={21} /> : <UserRound size={21} />}
-            <span>{user ? user.name?.split(' ')[0] || 'Sign out' : 'Account'}</span>
+            <UserRound size={21} />
+            <span>{user ? user.name?.split(' ')[0] || 'Account' : 'Account'}</span>
           </button>
           <button className="mobile-menu" type="button" aria-label="Toggle navigation" onClick={() => setMobileOpen((open) => !open)}>
             {mobileOpen ? <X size={23} /> : <Menu size={23} />}

@@ -5,6 +5,8 @@ import com.debbiecyber.QuickBite.entity.Restaurant;
 import com.debbiecyber.QuickBite.entity.User;
 import com.debbiecyber.QuickBite.enums.CuisineType;
 import com.debbiecyber.QuickBite.enums.UserRole;
+import com.debbiecyber.QuickBite.enums.AccountStatus;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
 import com.debbiecyber.QuickBite.repository.MenuItemRepository;
 import com.debbiecyber.QuickBite.repository.RestaurantRepository;
 import com.debbiecyber.QuickBite.repository.UserRepository;
@@ -15,6 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Component
 @ConditionalOnProperty(name = "app.demo-data.enabled", havingValue = "true")
@@ -83,33 +87,34 @@ public class DemoDataInitializer implements ApplicationRunner {
         restaurant.setLogoURL("/assets/menu/jollof-chicken.png");
         restaurant.setRating(4.6);
         restaurant.setIsOpen(true);
+        restaurant.setVerificationStatus(VerificationStatus.VERIFIED);
         restaurant = restaurantRepository.save(restaurant);
 
         upsertMenu(11L, restaurant, "Party Jollof & Chicken",
                 "Smoky party jollof with two pieces of flame-grilled chicken.",
-                "Popular", 4500.0, "/assets/menu/jollof-chicken.png");
+                "Popular", "4500.00", "/assets/menu/jollof-chicken.png");
         upsertMenu(12L, restaurant, "Nigerian Jollof Rice",
                 "Deeply seasoned tomato rice with peppers and our house spice blend.",
-                "Rice", 2800.0, "/assets/menu/jollof-rice.webp");
+                "Rice", "2800.00", "/assets/menu/jollof-rice.webp");
         upsertMenu(13L, restaurant, "Fried Rice & Chicken",
                 "Nigerian fried rice with vegetables, prawns and seasoned chicken.",
-                "Rice", 4200.0, "/assets/menu/fried-rice.png");
+                "Rice", "4200.00", "/assets/menu/fried-rice.png");
         upsertMenu(14L, restaurant, "Classic Beef Suya",
                 "Smoky beef skewers with yaji, onions, tomato and cucumber.",
-                "Grills", 3500.0, "/assets/menu/beef-suya.webp");
+                "Grills", "3500.00", "/assets/menu/beef-suya.webp");
         upsertMenu(15L, restaurant, "Grilled Tilapia",
                 "Whole grilled tilapia finished with a bright Nigerian pepper sauce.",
-                "Grills", 8500.0, "/assets/menu/grilled-tilapia.png");
+                "Grills", "8500.00", "/assets/menu/grilled-tilapia.png");
         upsertMenu(16L, restaurant, "Moi Moi",
                 "Steamed bean pudding, soft, savoury and perfect beside rice.",
-                "Sides", 1200.0, "/assets/menu/moi-moi.png");
+                "Sides", "1200.00", "/assets/menu/moi-moi.png");
         upsertMenu(17L, restaurant, "Goat Meat Pepper Soup",
                 "Aromatic pepper soup with tender goat meat and warming spices.",
-                "Soups", 4800.0, "/assets/menu/pepper-soup.png");
+                "Soups", "4800.00", "/assets/menu/pepper-soup.png");
     }
 
     private User ensureUser(String name, String email, String phoneNumber, UserRole role) {
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseGet(() -> userRepository.save(User.builder()
                         .name(name)
                         .email(email)
@@ -118,6 +123,13 @@ public class DemoDataInitializer implements ApplicationRunner {
                         .address("Lekki Phase 1, Lagos, Nigeria")
                         .role(role)
                         .build()));
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        user.setVerificationStatus(
+                role == UserRole.RESTAURANT_OWNER || role == UserRole.RIDER
+                        ? VerificationStatus.VERIFIED
+                        : VerificationStatus.NOT_REQUIRED
+        );
+        return userRepository.save(user);
     }
 
     private void upsertMenu(
@@ -126,7 +138,7 @@ public class DemoDataInitializer implements ApplicationRunner {
             String name,
             String description,
             String category,
-            Double price,
+            String price,
             String imageURL
     ) {
         if (!menuItemRepository.existsById(id)) {
@@ -144,7 +156,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         item.setName(name);
         item.setDescription(description);
         item.setCategory(category);
-        item.setPrice(price);
+        item.setPrice(new BigDecimal(price));
         item.setImageURL(imageURL);
         item.setIsAvailable(true);
         menuItemRepository.save(item);

@@ -3,6 +3,7 @@ package com.debbiecyber.QuickBite.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
+import java.math.BigDecimal;
 
 @Data
 @Builder
@@ -18,7 +19,7 @@ public class MenuItemResponse {
 
     private String category;
 
-    private Double price;
+    private BigDecimal price;
 
     private String imageURL;
 

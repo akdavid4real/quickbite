@@ -2,11 +2,13 @@ package com.debbiecyber.QuickBite.service;
 
 
 import com.debbiecyber.QuickBite.dto.response.RestaurantResponse;
+import com.debbiecyber.QuickBite.dto.response.PageResponse;
 import com.debbiecyber.QuickBite.dto.resquest.RestaurantRequest;
 import com.debbiecyber.QuickBite.entity.Restaurant;
 import com.debbiecyber.QuickBite.entity.User;
 import com.debbiecyber.QuickBite.enums.CuisineType;
 import com.debbiecyber.QuickBite.enums.UserRole;
+import com.debbiecyber.QuickBite.enums.VerificationStatus;
 import com.debbiecyber.QuickBite.exceptions.BadRequestException;
 import com.debbiecyber.QuickBite.exceptions.ResourceNotFoundException;
 import com.debbiecyber.QuickBite.exceptions.UnauthorizedException;
@@ -15,6 +17,7 @@ import com.debbiecyber.QuickBite.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,8 @@ public class RestaurantService {
                 .address(restaurantRequest.getAddress())
                 .phoneNumber(restaurantRequest.getPhoneNumber())
                 .logoURL(restaurantRequest.getLogoURl())
+                .isOpen(false)
+                .verificationStatus(VerificationStatus.PENDING)
                 .build();
 
         Restaurant createdRestaurant = restaurantRepository.save(restaurant);
@@ -73,26 +78,13 @@ public class RestaurantService {
     }
 
 
-    public List<RestaurantResponse> getAllOpenRestaurants() {
-        List<Restaurant> restaurants = restaurantRepository.findByIsOpenTrue();
-
-        List<RestaurantResponse> responseList = new ArrayList<>();
-        for (Restaurant restaurant : restaurants) {
-            responseList.add(mapToResponse(restaurant));
-        }
-        return responseList;
+    public PageResponse<RestaurantResponse> getAllOpenRestaurants(Pageable pageable) {
+        return PageResponse.from(restaurantRepository.findByIsOpenTrueAndVerificationStatus(VerificationStatus.VERIFIED, pageable), this::mapToResponse);
     }
 
 
-    public List<RestaurantResponse> getRestaurantByCuisine(CuisineType cuisineType) {
-        List<Restaurant> restaurants = restaurantRepository
-                .findByCuisineTypeAndIsOpenTrue(cuisineType);
-
-        List<RestaurantResponse> responseList = new ArrayList<>();
-        for (Restaurant restaurant : restaurants) {
-            responseList.add(mapToResponse(restaurant));
-        }
-        return responseList;
+    public PageResponse<RestaurantResponse> getRestaurantByCuisine(CuisineType cuisineType, Pageable pageable) {
+        return PageResponse.from(restaurantRepository.findByCuisineTypeAndIsOpenTrueAndVerificationStatus(cuisineType, VerificationStatus.VERIFIED, pageable), this::mapToResponse);
     }
 
 
@@ -104,30 +96,17 @@ public class RestaurantService {
     }
 
 
-    public List<RestaurantResponse> searchRestaurantByName(String name) {
-        List<Restaurant> restaurants = restaurantRepository.findByName(name);
-
-        List<RestaurantResponse> responseList = new ArrayList<>();
-        for (Restaurant restaurant : restaurants) {
-            responseList.add(mapToResponse(restaurant));
-        }
-        return responseList;
+    public PageResponse<RestaurantResponse> searchRestaurantByName(String name, Pageable pageable) {
+        return PageResponse.from(restaurantRepository.findByName(name, pageable), this::mapToResponse);
     }
 
 
-    public List<RestaurantResponse> getMyRestaurants(String ownerEmail) {
+    public PageResponse<RestaurantResponse> getMyRestaurants(String ownerEmail, Pageable pageable) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User with email " + ownerEmail + " not found"));
 
-        List<Restaurant> restaurants = restaurantRepository
-                .findByOwnerId(owner.getId());
-
-        List<RestaurantResponse> responseList = new ArrayList<>();
-        for (Restaurant restaurant : restaurants) {
-            responseList.add(mapToResponse(restaurant));
-        }
-        return responseList;
+        return PageResponse.from(restaurantRepository.findByOwnerId(owner.getId(), pageable), this::mapToResponse);
     }
 
 
@@ -137,6 +116,9 @@ public class RestaurantService {
 
         if (!restaurant.getOwner().getEmail().equals(ownerEmail)) {
             throw new UnauthorizedException("You do not have permission to update the status of this restaurant");
+        }
+        if (restaurant.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new BadRequestException("This restaurant must be approved before it can open");
         }
 
         restaurant.setIsOpen(!restaurant.getIsOpen());
@@ -169,6 +151,7 @@ public class RestaurantService {
                 .logoURL(restaurant.getLogoURL())
                 .rating(restaurant.getRating())
                 .isOpen(restaurant.getIsOpen())
+                .verificationStatus(restaurant.getVerificationStatus())
                 .build();
     }
 }

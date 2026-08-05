@@ -3,6 +3,7 @@ package com.debbiecyber.QuickBite.controller;
 
 import com.debbiecyber.QuickBite.dto.response.APIResponse;
 import com.debbiecyber.QuickBite.dto.response.RestaurantResponse;
+import com.debbiecyber.QuickBite.dto.response.PageResponse;
 import com.debbiecyber.QuickBite.dto.resquest.RestaurantRequest;
 import com.debbiecyber.QuickBite.enums.CuisineType;
 import com.debbiecyber.QuickBite.service.RestaurantService;
@@ -16,6 +17,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,7 +30,7 @@ public class RestaurantController {
 
 
     @PostMapping
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<RestaurantResponse>> createRestaurant(@Valid @RequestBody RestaurantRequest restaurantRequest, @AuthenticationPrincipal UserDetails userDetails) {
         RestaurantResponse restaurantResponse = restaurantService.createRestaurant(restaurantRequest, userDetails.getUsername());
 
@@ -37,7 +41,7 @@ public class RestaurantController {
 
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<RestaurantResponse>> updateRestaurant(@PathVariable Long id, @Valid @RequestBody RestaurantRequest restaurantRequest, @AuthenticationPrincipal UserDetails userDetails) {
         RestaurantResponse restaurantResponse = restaurantService.updateRestaurant(id, restaurantRequest, userDetails.getUsername());
 
@@ -46,8 +50,8 @@ public class RestaurantController {
 
 
     @GetMapping
-    public ResponseEntity<APIResponse<List<RestaurantResponse>>> getAllOpenRestaurants() {
-        List<RestaurantResponse> restaurantResponsesList = restaurantService.getAllOpenRestaurants();
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> getAllOpenRestaurants(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<RestaurantResponse> restaurantResponsesList = restaurantService.getAllOpenRestaurants(pageable);
 
         return ResponseEntity.ok(APIResponse.success("Restaurants fetched successfully", restaurantResponsesList));
     }
@@ -62,32 +66,32 @@ public class RestaurantController {
 
 
     @GetMapping("/cuisine/{cuisineType}")
-    public ResponseEntity<APIResponse<List<RestaurantResponse>>> getRestaurantsByCuisine(@PathVariable CuisineType cuisineType) {
-        List<RestaurantResponse> restaurantResponseList = restaurantService.getRestaurantByCuisine(cuisineType);
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> getRestaurantsByCuisine(@PathVariable CuisineType cuisineType, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<RestaurantResponse> restaurantResponseList = restaurantService.getRestaurantByCuisine(cuisineType, pageable);
 
         return ResponseEntity.ok(APIResponse.success("Restaurants fetched successfully", restaurantResponseList));
     }
 
 
     @GetMapping("/search")
-    public ResponseEntity<APIResponse<List<RestaurantResponse>>> searchRestaurants(@RequestParam String name) {
-        List<RestaurantResponse> restaurantResponseList = restaurantService.searchRestaurantByName(name);
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> searchRestaurants(@RequestParam String name, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<RestaurantResponse> restaurantResponseList = restaurantService.searchRestaurantByName(name, pageable);
 
         return ResponseEntity.ok(APIResponse.success("Restaurants according to search, fetched successfully", restaurantResponseList));
     }
 
 
     @GetMapping("/my-restaurants")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<APIResponse<List<RestaurantResponse>>> getMyRestaurants(@AuthenticationPrincipal UserDetails userDetails) {
-        List<RestaurantResponse> restaurantResponseList = restaurantService.getMyRestaurants(userDetails.getUsername());
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
+    public ResponseEntity<APIResponse<PageResponse<RestaurantResponse>>> getMyRestaurants(@AuthenticationPrincipal UserDetails userDetails, @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<RestaurantResponse> restaurantResponseList = restaurantService.getMyRestaurants(userDetails.getUsername(), pageable);
 
         return ResponseEntity.ok(APIResponse.success("Your restaurants fetched successfully!", restaurantResponseList));
     }
 
 
     @PatchMapping("{id}/openOrClose")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<RestaurantResponse>> openOrClose(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         RestaurantResponse restaurantResponse = restaurantService.openOrClose(id, userDetails.getUsername());
 
@@ -96,7 +100,7 @@ public class RestaurantController {
 
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER') and @providerAccess.canOperate(authentication.name)")
     public ResponseEntity<APIResponse<Void>> deleteRestaurant(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
         restaurantService.deleteRestaurant(id, userDetails.getUsername());
 

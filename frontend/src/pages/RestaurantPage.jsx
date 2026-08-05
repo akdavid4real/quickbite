@@ -22,6 +22,7 @@ export default function RestaurantPage() {
   const [category, setCategory] = useState('All')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [reviews, setReviews] = useState([])
   const { addItem } = useApp()
 
   useEffect(() => {
@@ -29,8 +30,8 @@ export default function RestaurantPage() {
     setLoading(true)
     setLoadError('')
 
-    Promise.allSettled([api.restaurant(restaurantId), api.menu(restaurantId)])
-      .then(([restaurantResult, menuResult]) => {
+    Promise.allSettled([api.restaurant(restaurantId), api.menu(restaurantId), api.restaurantReviews(restaurantId)])
+      .then(([restaurantResult, menuResult, reviewResult]) => {
         if (!active) return
         const liveRestaurant = restaurantResult.status === 'fulfilled'
           ? normalizeRestaurant(restaurantResult.value)
@@ -53,6 +54,7 @@ export default function RestaurantPage() {
         } else {
           setItems(fallbackItems)
         }
+        setReviews(reviewResult.status === 'fulfilled' && Array.isArray(reviewResult.value) ? reviewResult.value : [])
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -142,6 +144,12 @@ export default function RestaurantPage() {
             <p>{items.length === 0 ? 'This restaurant has not published its menu yet.' : 'Choose another menu category.'}</p>
           </div>
         ) : null}
+      </section>
+      <section className="page-shell restaurant-reviews">
+        <div className="section-heading"><div><p className="menu-eyebrow">Verified orders</p><h2>Customer reviews</h2></div><p>{reviews.length} review{reviews.length === 1 ? '' : 's'}</p></div>
+        {reviews.length === 0 ? <div className="empty-menu"><Star size={28} /><h3>No reviews yet</h3><p>Delivered-order reviews will appear here.</p></div> : (
+          <div className="review-grid">{reviews.map((review) => <article key={review.id}><div><strong>{review.customerName}</strong><span><Star fill="currentColor" />{review.rating}/5</span></div><p>{review.comment || 'Rated without a written comment.'}</p></article>)}</div>
+        )}
       </section>
     </div>
   )
