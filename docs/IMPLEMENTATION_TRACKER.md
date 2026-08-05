@@ -84,6 +84,9 @@ August 2026 repository audit.
 - 2026-08-05: Completed the final regression: 16 backend tests, frontend lint,
   production build, authenticated page-envelope checks for all roles, and
   rendered customer, owner, admin, and rider QA with no browser console errors.
+- 2026-08-05: Expanded the idempotent demo catalog to three verified restaurants
+  and 19 menu items. Added five optimized Nigerian-food images and refreshed the
+  tracked SQLite seed so fresh deployments receive the complete catalog.
 
 ## Completion evidence
 

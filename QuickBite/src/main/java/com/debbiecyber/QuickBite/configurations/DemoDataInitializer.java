@@ -60,35 +60,13 @@ public class DemoDataInitializer implements ApplicationRunner {
         ensureUser("QuickBite Demo Rider", "rider@quickbite.local", "+2348000000020", UserRole.RIDER);
         ensureUser("QuickBite Demo Admin", "admin@quickbite.local", "+2348000000030", UserRole.ADMIN);
 
-        if (!restaurantRepository.existsById(1L)) {
-            jdbcTemplate.update("""
-                    INSERT INTO restaurants (
-                        id, owner_id, name, description, cuisine_type, address,
-                        latitude, longitude, phone_number, logourl, rating,
-                        is_open, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    """,
-                    1L, owner.getId(), "Jollof & Co.",
-                    "Firewood flavour, generous portions, familiar comfort.",
-                    CuisineType.NIGERIAN.name(), "Lekki Phase 1, Lagos, Nigeria",
-                    6.4474, 3.4723, "+2348000000002",
-                    "/assets/menu/jollof-chicken.png", 4.6, true);
-        }
-
-        Restaurant restaurant = restaurantRepository.findById(1L).orElseThrow();
-        restaurant.setOwner(owner);
-        restaurant.setName("Jollof & Co.");
-        restaurant.setDescription("Firewood flavour, generous portions, familiar comfort.");
-        restaurant.setCuisineType(CuisineType.NIGERIAN);
-        restaurant.setAddress("Lekki Phase 1, Lagos, Nigeria");
-        restaurant.setLatitude(6.4474);
-        restaurant.setLongitude(3.4723);
-        restaurant.setPhoneNumber("+2348000000002");
-        restaurant.setLogoURL("/assets/menu/jollof-chicken.png");
-        restaurant.setRating(4.6);
-        restaurant.setIsOpen(true);
-        restaurant.setVerificationStatus(VerificationStatus.VERIFIED);
-        restaurant = restaurantRepository.save(restaurant);
+        Restaurant restaurant = ensureRestaurant(
+                1L, owner, "Jollof & Co.",
+                "Firewood flavour, generous portions, familiar comfort.",
+                CuisineType.NIGERIAN, "Lekki Phase 1, Lagos, Nigeria",
+                6.4474, 3.4723, "+2348000000002",
+                "/assets/menu/jollof-chicken.png", 4.6
+        );
 
         upsertMenu(11L, restaurant, "Party Jollof & Chicken",
                 "Smoky party jollof with two pieces of flame-grilled chicken.",
@@ -111,6 +89,58 @@ public class DemoDataInitializer implements ApplicationRunner {
         upsertMenu(17L, restaurant, "Goat Meat Pepper Soup",
                 "Aromatic pepper soup with tender goat meat and warming spices.",
                 "Soups", "4800.00", "/assets/menu/pepper-soup.png");
+
+        Restaurant mamaTs = ensureRestaurant(
+                2L, owner, "Mama T's Kitchen",
+                "Rich soups and proper home-style classics.",
+                CuisineType.NIGERIAN, "Yaba, Lagos, Nigeria",
+                6.5158, 3.3899, "+2348000000003",
+                "/assets/efo-riro.png", 4.5
+        );
+        upsertMenu(21L, mamaTs, "Efo Riro & Pounded Yam",
+                "Deeply seasoned vegetable stew with assorted meat and smooth pounded yam.",
+                "Swallow", "5200.00", "/assets/efo-riro.png");
+        upsertMenu(22L, mamaTs, "Egusi Soup & Pounded Yam",
+                "Melon seed soup loaded with greens and assorted meat, served with pounded yam.",
+                "Swallow", "5400.00", "/assets/menu/egusi-soup.webp");
+        upsertMenu(23L, mamaTs, "Beans Porridge & Plantain",
+                "Creamy Nigerian beans porridge served with sweet fried plantain.",
+                "Mains", "3200.00", "/assets/menu/beans-porridge.webp");
+        upsertMenu(24L, mamaTs, "White Rice & Tomato Stew",
+                "Steamed rice with slow-cooked Nigerian tomato stew and tender beef.",
+                "Rice", "3800.00", "/assets/menu/tomato-stew.webp");
+        upsertMenu(25L, mamaTs, "Moi Moi",
+                "Steamed bean pudding with peppers and traditional spices.",
+                "Sides", "1200.00", "/assets/menu/moi-moi.png");
+        upsertMenu(26L, mamaTs, "Akara Breakfast",
+                "Crisp bean fritters served hot for a simple Lagos breakfast.",
+                "Breakfast", "1800.00", "/assets/menu/akara.webp");
+
+        Restaurant suyaRepublic = ensureRestaurant(
+                3L, owner, "Suya Republic",
+                "Smoky skewers, bold yaji and late-night favourites.",
+                CuisineType.FAST_FOOD, "Surulere, Lagos, Nigeria",
+                6.5059, 3.3509, "+2348000000004",
+                "/assets/suya.png", 4.7
+        );
+        upsertMenu(31L, suyaRepublic, "Classic Beef Suya",
+                "Smoky beef skewers with onions, cabbage and yaji.",
+                "Grills", "3500.00", "/assets/menu/beef-suya.webp");
+        upsertMenu(32L, suyaRepublic, "Chicken Suya",
+                "Juicy grilled chicken coated in a bold house yaji blend.",
+                "Grills", "4000.00", "/assets/menu/chicken-suya.webp");
+        upsertMenu(33L, suyaRepublic, "Grilled Tilapia",
+                "Whole tilapia grilled over flame and finished with pepper sauce.",
+                "Grills", "8500.00", "/assets/menu/grilled-tilapia.png");
+        upsertMenu(34L, suyaRepublic, "Suya Party Box",
+                "A generous sharing box of beef suya, vegetables and extra spice.",
+                "Popular", "7500.00", "/assets/suya.png");
+        upsertMenu(35L, suyaRepublic, "Goat Meat Pepper Soup",
+                "Tender goat meat in a warming, aromatic pepper broth.",
+                "Soups", "4800.00", "/assets/menu/pepper-soup.png");
+        upsertMenu(36L, suyaRepublic, "Party Jollof & Suya",
+                "Smoky party jollof paired with freshly grilled beef suya.",
+                "Rice", "5200.00", "/assets/menu/jollof-rice.webp");
     }
 
     private User ensureUser(String name, String email, String phoneNumber, UserRole role) {
@@ -130,6 +160,48 @@ public class DemoDataInitializer implements ApplicationRunner {
                         : VerificationStatus.NOT_REQUIRED
         );
         return userRepository.save(user);
+    }
+
+    private Restaurant ensureRestaurant(
+            Long id,
+            User owner,
+            String name,
+            String description,
+            CuisineType cuisineType,
+            String address,
+            Double latitude,
+            Double longitude,
+            String phoneNumber,
+            String logoURL,
+            Double rating
+    ) {
+        if (!restaurantRepository.existsById(id)) {
+            jdbcTemplate.update("""
+                    INSERT INTO restaurants (
+                        id, owner_id, name, description, cuisine_type, address,
+                        latitude, longitude, phone_number, logourl, rating,
+                        is_open, verification_status, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """,
+                    id, owner.getId(), name, description, cuisineType.name(), address,
+                    latitude, longitude, phoneNumber, logoURL, rating, true,
+                    VerificationStatus.VERIFIED.name());
+        }
+
+        Restaurant restaurant = restaurantRepository.findById(id).orElseThrow();
+        restaurant.setOwner(owner);
+        restaurant.setName(name);
+        restaurant.setDescription(description);
+        restaurant.setCuisineType(cuisineType);
+        restaurant.setAddress(address);
+        restaurant.setLatitude(latitude);
+        restaurant.setLongitude(longitude);
+        restaurant.setPhoneNumber(phoneNumber);
+        restaurant.setLogoURL(logoURL);
+        restaurant.setRating(rating);
+        restaurant.setIsOpen(true);
+        restaurant.setVerificationStatus(VerificationStatus.VERIFIED);
+        return restaurantRepository.save(restaurant);
     }
 
     private void upsertMenu(
