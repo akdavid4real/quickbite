@@ -334,6 +334,7 @@ public class AdminService {
             orderItemResponseList.add(OrderItemResponse.builder()
                     .id(orderItems.getId())
                     .itemName(orderItems.getItemName())
+                    .imageURL(orderItems.getMenuItem() != null ? orderItems.getMenuItem().getImageURL() : null)
                     .price(orderItems.getPriceAtOrder())
                     .quantity(orderItems.getQuantity())
                     .subTotal(subTotal)

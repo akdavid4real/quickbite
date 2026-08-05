@@ -36,7 +36,7 @@ function formatDate(value) {
 
 function OrderCard({ order, reviewed, onCancelled, onReview, onToast }) {
   const fallbackRestaurant = restaurants.find((restaurant) => restaurant.id === order.restaurantId)
-  const image = fallbackRestaurant?.image || '/assets/hero-jollof.png'
+  const image = order.orderItems?.[0]?.imageURL || fallbackRestaurant?.image || '/assets/hero-jollof.png'
   const itemSummary = order.orderItems?.map((item) => `${item.quantity}× ${item.itemName}`).join(', ') || 'Order items'
   const activeStage = statusStage[order.orderStatus] ?? 0
   const cancelled = order.orderStatus === 'CANCELLED'

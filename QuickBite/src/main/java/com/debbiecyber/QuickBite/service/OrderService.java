@@ -312,6 +312,7 @@ public class OrderService {
             OrderItemResponse itemResponse = OrderItemResponse.builder()
                     .id(orderItem.getId())
                     .itemName(orderItem.getItemName())
+                    .imageURL(orderItem.getMenuItem() != null ? orderItem.getMenuItem().getImageURL() : null)
                     .price(orderItem.getPriceAtOrder())
                     .quantity(orderItem.getQuantity())
                     .subTotal(subtotal)

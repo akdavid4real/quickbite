@@ -10,7 +10,7 @@ import { useApp } from '../store/AppContext'
 
 const categoryIcons = [Utensils, CookingPot, Coffee, Soup, Flame, Ham, Salad, CupSoda]
 
-function ActiveOrderCard({ order, signedIn }) {
+function ActiveOrderCard({ order, signedIn, restaurantImage }) {
   if (!order) {
     return (
       <aside className="active-order active-order-empty">
@@ -22,6 +22,8 @@ function ActiveOrderCard({ order, signedIn }) {
     )
   }
 
+  const firstItem = order.orderItems?.[0]
+
   return (
     <aside className="active-order">
       <div className="active-order-head">
@@ -29,8 +31,8 @@ function ActiveOrderCard({ order, signedIn }) {
         <strong>₦{Number(order.totalAmount || 0).toLocaleString()}</strong>
       </div>
       <div className="active-order-food">
-        <img src="/assets/hero-jollof.png" alt="" />
-        <div><strong>{order.orderItems?.[0]?.itemName || 'Your order'}</strong><span>{order.orderItems?.length || 0} items</span></div>
+        <img src={firstItem?.imageURL || restaurantImage || '/assets/hero-jollof.png'} alt="" />
+        <div><strong>{firstItem?.itemName || 'Your order'}</strong><span>{order.orderItems?.length || 0} items</span></div>
       </div>
       <ol className="order-progress">
         <li className={order.orderStatus !== 'PENDING' ? 'done' : 'current'}><span><Check size={14} /></span><div><strong>Order confirmed</strong><small>{order.orderStatus === 'PENDING' ? 'Waiting for the restaurant' : 'Accepted'}</small></div></li>
@@ -92,6 +94,11 @@ export default function HomePage() {
       && (selectedCategory === 'All' || searchable.includes(selectedCategory.toLowerCase()))
   })
 
+  // The two sections show different slices of the same page so nothing is listed twice.
+  const popularRestaurants = visibleRestaurants.slice(0, 3)
+  const exploreRestaurants = visibleRestaurants.slice(3)
+  const activeOrderRestaurant = restaurantList.find((restaurant) => restaurant.id === activeOrder?.restaurantId)
+
   function chooseCategory(category) {
     const next = new URLSearchParams(searchParams)
     if (category === 'All') next.delete('category')
@@ -127,27 +134,31 @@ export default function HomePage() {
         <div className="restaurants-column">
           <div className="section-heading">
             <h2>{query ? `Results for “${query}”` : 'Popular near you'}</h2>
-            {(query || selectedCategory !== 'All') ? <Link to="/#restaurants">Clear filters</Link> : <a href="#explore">See all restaurants <ArrowRight size={17} /></a>}
+            {(query || selectedCategory !== 'All')
+              ? <Link to="/#restaurants">Clear filters</Link>
+              : exploreRestaurants.length > 0 ? <a href="#explore">See all restaurants <ArrowRight size={17} /></a> : null}
           </div>
           <div className="restaurant-list">
-            {visibleRestaurants.length === 0 ? <div className="restaurant-empty"><h3>No matching restaurants</h3><p>Try another search or category.</p></div> : visibleRestaurants.map((restaurant) => <RestaurantRow restaurant={restaurant} key={restaurant.id} />)}
+            {visibleRestaurants.length === 0 ? <div className="restaurant-empty"><h3>No matching restaurants</h3><p>Try another search or category.</p></div> : popularRestaurants.map((restaurant) => <RestaurantRow restaurant={restaurant} key={restaurant.id} />)}
           </div>
           <PaginationControls page={page} totalPages={pageInfo.totalPages} onPageChange={setPage} label="restaurants" />
         </div>
-        <ActiveOrderCard order={activeOrder} signedIn={Boolean(user)} />
+        <ActiveOrderCard order={activeOrder} signedIn={Boolean(user)} restaurantImage={activeOrderRestaurant?.image} />
       </section>
 
-      <section className="explore page-shell" id="explore">
-        <div className="section-heading"><h2>More to explore</h2><p>Great kitchens and very good reasons not to cook tonight.</p></div>
-        <div className="explore-grid">
-          {visibleRestaurants.map((restaurant) => (
-            <Link to={`/restaurants/${restaurant.id}`} className="explore-card" key={restaurant.id}>
-              <img src={restaurant.image} alt="" />
-              <div><h3>{restaurant.name}</h3><p>{restaurant.description}</p><span><Clock3 size={16} />{restaurant.deliveryTime}</span></div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {exploreRestaurants.length > 0 && (
+        <section className="explore page-shell" id="explore">
+          <div className="section-heading"><h2>More to explore</h2><p>Great kitchens and very good reasons not to cook tonight.</p></div>
+          <div className="explore-grid">
+            {exploreRestaurants.map((restaurant) => (
+              <Link to={`/restaurants/${restaurant.id}`} className="explore-card" key={restaurant.id}>
+                <img src={restaurant.image} alt="" />
+                <div><h3>{restaurant.name}</h3><p>{restaurant.description}</p><span><Clock3 size={16} />{restaurant.deliveryTime}</span></div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
       <footer className="site-footer"><div className="page-shell"><span className="wordmark">QuickBite</span><p>Made for hungry people in Lagos.</p><Link to="/owner">Restaurant owner dashboard</Link></div></footer>
     </>
   )

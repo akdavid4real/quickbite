@@ -45,6 +45,21 @@ a {
   color: inherit;
   text-decoration: none;
 }
+/* Keyboard-only focus ring. The offset keeps it visible on red buttons too. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+.primary-button:focus-visible,
+.hero-button:focus-visible {
+  outline-color: var(--ink);
+}
 img {
   display: block;
   max-width: 100%;
