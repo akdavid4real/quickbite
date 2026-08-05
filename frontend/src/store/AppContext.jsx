@@ -66,6 +66,8 @@ export function AppProvider({ children }) {
   const [isCartOpen, setCartOpen] = useState(false)
   const [isAuthOpen, setAuthOpen] = useState(false)
   const [toast, setToast] = useState('')
+  const [pendingCartItem, setPendingCartItem] = useState(null)
+  const [isReplacingCart, setReplacingCart] = useState(false)
   const hydratedUserId = useRef(null)
 
   const saveCart = useCallback((next) => {
@@ -94,13 +96,14 @@ export function AppProvider({ children }) {
       setToast('Open the restaurant to choose an available menu item.')
       return
     }
-    const existingRestaurant = cart[0]?.restaurantId
-    if (existingRestaurant && String(existingRestaurant) !== String(nextItem.restaurantId)) {
-      setToast('Your cart can only contain items from one restaurant.')
-      return
-    }
     if (user && user.role !== 'CUSTOMER') {
       setToast('Please use a customer account to place an order.')
+      return
+    }
+    const existingRestaurant = cart[0]?.restaurantId
+    if (existingRestaurant && String(existingRestaurant) !== String(nextItem.restaurantId)) {
+      setPendingCartItem(nextItem)
+      setCartOpen(true)
       return
     }
     const current = cart.find((cartItem) => cartItem.id === nextItem.id)
@@ -121,6 +124,37 @@ export function AppProvider({ children }) {
       setToast(error.message)
     }
   }, [cart, replaceWithServerCart, saveCart, user])
+
+  const cancelCartReplacement = useCallback(() => {
+    setPendingCartItem(null)
+  }, [])
+
+  const replaceCart = useCallback(async () => {
+    if (!pendingCartItem || isReplacingCart) return
+
+    const nextItem = pendingCartItem
+    const previous = cart
+    setReplacingCart(true)
+    setPendingCartItem(null)
+    saveCart([nextItem])
+
+    try {
+      if (user?.role === 'CUSTOMER') {
+        await api.clearCart()
+        if (!nextItem.isLocalPreview) {
+          const response = await api.addToCart({ menuItemId: nextItem.id, quantity: 1 })
+          replaceWithServerCart(response)
+        }
+      }
+      setToast(`${nextItem.name} was added to a new cart.`)
+    } catch (error) {
+      saveCart(previous)
+      setPendingCartItem(nextItem)
+      setToast(error.message)
+    } finally {
+      setReplacingCart(false)
+    }
+  }, [cart, isReplacingCart, pendingCartItem, replaceWithServerCart, saveCart, user])
 
   const updateQuantity = useCallback(async (id, quantity) => {
     const currentItem = cart.find((item) => item.id === id)
@@ -244,7 +278,11 @@ export function AppProvider({ children }) {
     isCartOpen,
     isAuthOpen,
     toast,
+    pendingCartItem,
+    isReplacingCart,
     addItem,
+    cancelCartReplacement,
+    replaceCart,
     updateQuantity,
     clearCart,
     syncCart,
@@ -256,7 +294,7 @@ export function AppProvider({ children }) {
     setAuthOpen,
     setToast,
     menuItems,
-  }), [cart, cartCount, cartTotal, cartRestaurant, user, isCartOpen, isAuthOpen, toast, addItem, updateQuantity, clearCart, syncCart, resetCart, authenticate, signOut, updateSessionUser])
+  }), [cart, cartCount, cartTotal, cartRestaurant, user, isCartOpen, isAuthOpen, toast, pendingCartItem, isReplacingCart, addItem, cancelCartReplacement, replaceCart, updateQuantity, clearCart, syncCart, resetCart, authenticate, signOut, updateSessionUser])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

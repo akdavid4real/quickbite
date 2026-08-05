@@ -10,7 +10,11 @@ export default function CartDrawer() {
     cartCount,
     cartTotal,
     cartRestaurant,
+    cancelCartReplacement,
     isCartOpen,
+    isReplacingCart,
+    pendingCartItem,
+    replaceCart,
     resetCart,
     setAuthOpen,
     setCartOpen,
@@ -86,14 +90,14 @@ export default function CartDrawer() {
 
   return (
     <div className={isCartOpen ? 'drawer-layer is-open' : 'drawer-layer'} aria-hidden={!isCartOpen}>
-      <button className="drawer-scrim" type="button" aria-label="Close cart" onClick={() => setCartOpen(false)} />
+      <button className="drawer-scrim" type="button" aria-label="Dismiss cart" onClick={() => setCartOpen(false)} />
       <aside className="cart-drawer" aria-label="Shopping cart">
         <div className="drawer-header">
           <div>
             <p>Your cart</p>
             <span>{cartCount} {cartCount === 1 ? 'item' : 'items'} · {cartRestaurant?.name || 'QuickBite'}</span>
           </div>
-          <button className="square-button" type="button" onClick={() => setCartOpen(false)}><X size={20} /></button>
+          <button className="square-button" type="button" aria-label="Close cart" onClick={() => setCartOpen(false)}><X size={20} /></button>
         </div>
 
         {cart.length === 0 ? (
@@ -105,6 +109,18 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
+            {pendingCartItem ? (
+              <section className="cart-replacement" aria-labelledby="cart-replacement-title">
+                <div>
+                  <strong id="cart-replacement-title">Start a new cart?</strong>
+                  <p>Clear the items from {cartRestaurant?.name} and add {pendingCartItem.name} instead?</p>
+                </div>
+                <div>
+                  <button className="secondary-button" disabled={isReplacingCart} type="button" onClick={cancelCartReplacement}>Keep current cart</button>
+                  <button className="primary-button" disabled={isReplacingCart} type="button" onClick={replaceCart}>{isReplacingCart ? 'Replacing…' : 'Start new cart'}</button>
+                </div>
+              </section>
+            ) : null}
             <div className="cart-list">
               {cart.map((item) => (
                 <article className="cart-item" key={item.id}>

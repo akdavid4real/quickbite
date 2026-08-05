@@ -715,6 +715,36 @@ p {
   gap: 14px;
   padding-block: 20px;
 }
+
+.cart-replacement {
+  margin: 16px 20px 0;
+  padding: 16px;
+  border: 1px solid #f1c6a8;
+  border-radius: 14px;
+  background: #fff8f2;
+}
+
+.cart-replacement strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #5e2c16;
+}
+
+.cart-replacement p {
+  margin: 0;
+  color: #6c5145;
+  line-height: 1.45;
+}
+
+.cart-replacement > div:last-child {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cart-replacement button {
+  width: 100%;
+}
 .cart-item {
   display: grid;
   grid-template-columns: 90px 1fr;
